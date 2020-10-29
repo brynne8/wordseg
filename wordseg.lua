@@ -1,7 +1,3 @@
-local f = io.open('covid19.txt', 'rb')
-local text = f:read('*all')
-f:close()
-
 local re = require('lpeg.re')
 
 local corpus = re.compile([[
@@ -18,6 +14,10 @@ end
 local logN = 10.032024358385
 local dict = {}
 for line in io.lines('zh-tf.txt') do
+  local word, prob = line:match('^(.-)\t([^%s]+)')
+  dict[word] = tonumber(prob)
+end
+for line in io.lines('jieba-tf.txt') do
   local word, prob = line:match('^(.-)\t([^%s]+)')
   dict[word] = tonumber(prob)
 end
@@ -57,7 +57,7 @@ function wordseg(input, maxlen)
     -- logarithmic probability of part1
     local prob_log_part1 = dict[part1]
     if not prob_log_part1 then
-      prob_log_part1 = 3 * (1 - i) - logN
+      prob_log_part1 = 3 * (1 - math.pow(1.618, i)) - logN
     end
     
     local seg, prob_log_sum = '', 0
@@ -76,7 +76,7 @@ function wordseg(input, maxlen)
   
   local segment_it = re.compile([[
     sentence <- alnum+ / utf8^-]] .. maxlen .. [[
-    alnum    <- ({} {[%s%w.,/-]+} {}) -> western ]] ..
+    alnum    <- ({} {[%s%w%p]+} {}) -> western ]] ..
     "utf8    <- ({[\0-\127\194-\244][\128-\191]*} {}) -> kanji", defs)
   
   segment_it:match(input)
@@ -86,10 +86,16 @@ function wordseg(input, maxlen)
   return best_comp
 end
 
---local res = corpus:match(text)
---
---for i, v in ipairs(res) do
---  print(unpack(wordseg(v, 5)))
---end
+function cuttest(str)
+  local res = corpus:match(str)
 
-print(unpack(wordseg('新冠病毒', 5)))
+  for i, v in ipairs(res) do
+    print(unpack(wordseg(v, 7)))
+  end
+end
+
+local f = io.open('covid19.txt', 'rb')
+local text = f:read('*all')
+f:close()
+
+cuttest(text)
